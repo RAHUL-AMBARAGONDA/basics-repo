@@ -1,45 +1,59 @@
 name: Deploy website
+
 on:
   push:
     branches:
       - master
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Get code
         uses: actions/checkout@v3
+
       - name: Install dependencies
         run: npm ci
+
       - name: Lint code
         run: npm run lint
+
       - name: Test code
         run: npm run test
+
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Get code
         uses: actions/checkout@v3
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build website
         run: npm run build
-      - name: upload artifact
+
+      - name: Check build output
+        run: ls -R
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: new-file
-          path: new
+          path: new # Make sure this directory exists after build
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy
-        run: echo "Deploying..."
-      - name: d
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: new-file
-      - name: output
-        run: ls
+
+      - name: List artifact content
+        run: ls -R new-file
+
+      - name: Deploy
+        run: echo "Deploying..." && cat new-file/* || echo "No files to deploy"
