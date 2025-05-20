@@ -30,7 +30,7 @@ jobs:
         with:
           name: new-file
           path: |
-            new-file
+            new-file/
             package.json
   deploy:
     needs: build
