@@ -9,13 +9,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Get code
+      - name: Checkout code
         uses: actions/checkout@v3
-      - name: actions/cache@v4
+
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: ~/.npm
           key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+
       - name: Install dependencies
         run: npm ci
 
@@ -25,37 +27,53 @@ jobs:
       - name: Test code
         id: run-tests
         run: npm run test
-      - name: uploadmtest report
+
+      - name: Upload test report if failed
         if: steps.run-tests.outcome == 'failure'
+        run: echo "Tests failed. Upload your test report here."
+
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Get code
+      - name: Checkout code
         uses: actions/checkout@v3
-      - name: actions/cache@v4
+
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: ~/.npm
           key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build website
-        run: npm run build
+        run: |
+          npm run build
+          mkdir -p new
+          echo "Build completed at $(date)" > new/output.txt
 
-      - name: Check build output
-        run: ls -R
+      - name: List build output
+        run: ls -R new
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: new-file
-          path: new # Make sure this directory exists after build
+          path: new
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: new-file
+          path: downloaded-new
+
       - name: Deploy
-        run: echo "Deploying..." && cat new-file/* || echo "No files to deploy"
+        run: |
+          echo "Deploying files..."
+          ls -R downloaded-new
