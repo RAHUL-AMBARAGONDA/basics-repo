@@ -1,4 +1,4 @@
-name: Deploy website
+name: Deploy website with controlled failures
 
 on:
   push:
@@ -21,16 +21,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint code
-        run: npm run lint
+      - name: Intentionally fail lint step
+        run: exit 1 # Simulate failure
+        continue-on-error: true # Don't stop the job
+
+      - name: Print message if lint failed
+        if: failure()
+        run: echo "Lint step failed but continuing..."
 
       - name: Test code
-        id: run-tests
-        run: npm run test
+        id: test-step
+        run: exit 1 # Simulate test failure
 
-      - name: Upload test report if failed
-        if: failure() && steps.run-tests.outcome == 'failure'
-        run: echo "Tests failed. Upload your test report here."
+      - name: Upload test report if tests failed
+        if: steps.test-step.outcome == 'failure'
+        run: echo "Tests failed! Uploading test report..."
 
   build:
     needs: test
@@ -50,12 +55,8 @@ jobs:
 
       - name: Build website
         run: |
-          npm run build
           mkdir -p new
-          echo "Build completed at $(date)" > new/output.txt
-
-      - name: List build output
-        run: ls -R new
+          echo "This is a build file" > new/output.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -75,5 +76,5 @@ jobs:
 
       - name: Deploy
         run: |
-          echo "Deploying files..."
+          echo "Deploying..."
           ls -R downloaded-new
